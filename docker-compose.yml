@@ -1,0 +1,72 @@
+version: '3'
+
+services:
+  # mysql
+  db:
+    container_name: db
+    image: postgres
+    networks:
+      app_net:
+        ipv4_address: 192.168.1.20
+    volumes:
+      - postgres_data:/var/lib/postgresql/data/
+  redis:
+    container_name: redis
+    image: "redis:alpine"
+    networks:
+      app_net:
+        ipv4_address: 192.168.1.21
+    ports:
+      - "6379:6379"
+  web:
+    container_name: web
+    build: .
+    command: bash -c "python /precocerto/manage.py migrate --noinput && python /precocerto/manage.py loaddata sitevendas_initial_data && python /precocerto/manage.py loaddata api_initial_data && python /precocerto/manage.py runserver 0.0.0.0:8000"
+    volumes:
+      - .:/precocerto
+    networks:
+      app_net:
+        ipv4_address: 192.168.1.22  
+    ports:
+      - "8000:8000"
+    links:
+      - db
+      - redis
+    depends_on:
+      - db
+      - redis
+  celery:
+    container_name: celery
+    build: .
+    networks:
+      app_net:
+        ipv4_address: 192.168.1.23
+    command: celery -A precocerto worker -l info
+    volumes:
+      - .:/precocerto
+    depends_on:
+      - db
+      - redis
+  celery-beat:
+    container_name: celery-beat
+    build: .
+    networks:
+      app_net:
+        ipv4_address: 192.168.1.24
+    command: celery -A precocerto beat -l info
+    volumes:
+      - .:/precocerto
+    depends_on:
+      - db
+      - redis
+volumes:
+  postgres_data:
+
+networks:
+  app_net:
+    driver: bridge
+    ipam:
+      driver: default
+      config:
+      -
+        subnet: 192.168.1.0/24
