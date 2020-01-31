@@ -5,7 +5,7 @@ from api.tasks import *
 # Create your tests here.
 class TaskTestCase(TestCase):
     def setUp(self):
-        pass
-    
-    def test_getQuantidadeVendas(self):
         getQuantidadeVendas()
+    
+    def (self):
+        pass

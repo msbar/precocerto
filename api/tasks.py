@@ -28,24 +28,21 @@ def integraVendas(page):
 			order_modified = orders['results'][i]['modified']
 			order_ProductsSold = orders['results'][i]['ProductsSold']
 			
-			# Faz a query para o upinsert - se não houver o id insert e se tiver faz o update
-			query = ''' INSERT INTO api_order (id,status, date, partial_total, discount, point_sale, shipment_value, total, modified)
-				VALUES ({id}, '{status}','{date}',{partial_total},{discount},'{point_sale}',{shipment_value},{total},'{modified}')
-				ON CONFLICT (id) DO
-				UPDATE SET status = '{status}', date = '{date}', partial_total = {partial_total}, discount = {discount},
-				point_sale = '{point_sale}', shipment_value = {shipment_value}, total={total}, modified = '{modified}' 
-				RETURNING id '''
-			
+			#Cria o contexto para executar as que
 			with connection.cursor() as cursor:
+				# Faz a query para o upinsert - se não houver o id insert e se tiver faz o update
+				query = ''' INSERT INTO api_order (id,status, date, partial_total, discount, point_sale, shipment_value, total, modified)
+					VALUES ({id}, '{status}','{date}',{partial_total},{discount},'{point_sale}',{shipment_value},{total},'{modified}')
+					ON CONFLICT (id) DO
+					UPDATE SET status = '{status}', date = '{date}', partial_total = {partial_total}, discount = {discount},
+					point_sale = '{point_sale}', shipment_value = {shipment_value}, total={total}, modified = '{modified}' 
+					RETURNING id '''
 				cursor.execute(query.format(id=order_id, status=order_status, date=order_date, partial_total=order_partial_total, discount=order_discount, point_sale=order_point_sale, shipment_value=order_shipment_value, total=order_total, modified=order_modified))
-				# se houver o last ip houve insert se não houve update
-				if cursor.lastrowid:
-					api_order_id = cursor.lastrowid
-					print("Insert id: %s" % api_order_id)
-				else:
-					result = cursor.fetchone()
-					api_order_id = result[0]
-					print("Update id: %s" % api_order_id)
+				
+				#retorna o id da query
+				result = cursor.fetchone()
+				api_order_id = result[0]
+				print("Integrando Venda id: %s" % api_order_id)
 
 				# Deleta produtos da tabela relacionamentos do referido ID
 				query = ''' DELETE FROM "api_order_ProductsSold" WHERE order_id = {order_id}'''
@@ -58,13 +55,20 @@ def integraVendas(page):
 
 	print("Vendas Integradas com sucesso")
 
-# simula aleatóriamente a quantidade
-# de vendas entre 100 e 500 e chama a integração
+# task chamada automáticamente a cada minuto - CELERY_BEAT_SCHEDULE setting.py
 @app.task(name='tasks.getQuantidadeVendas')
 def getQuantidadeVendas():
-	quantidadeVendas = random.randint(100, 500)
-	quantidadeCallApi = ceil(quantidadeVendas/100)
-	print(quantidadeVendas)
-	print(quantidadeCallApi)
-	for i in range(quantidadeCallApi):
-		integraVendas.delay(i+1)
+	# prepara a url para acessar o site de vendas e obtém o total de vendas.
+	url_sitevendas = "http://192.168.1.22:8000/sitevendas/orders/"
+	print(url_sitevendas)
+	r = requests.get(url_sitevendas)
+	if r.status_code != 200:
+		print('Url Não Responde')
+	else:	
+		orders = r.json()
+		
+		quantidadeVendas = orders['count'] #pega a quantidade de vendas através api
+		quantidadeCallApi = ceil(quantidadeVendas/100) #Calcula quantas páginas serão necessárias acessar pois são 100 registros por página
+		print("Quantidades de Vendas a serem processadas: %s, em %s Páginas" %(quantidadeVendas, quantidadeCallApi))
+		for i in range(quantidadeCallApi): #Chama a Função de integração através Tasks Celery processando paralelamente cada página da api
+			integraVendas.delay(i+1)

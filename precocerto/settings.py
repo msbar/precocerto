@@ -138,7 +138,7 @@ REST_FRAMEWORK = {
     ],
 
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
-    'PAGE_SIZE': 4
+    'PAGE_SIZE': 100
 }
 
 CELERY_BROKER_URL = 'redis://redis:6379'
@@ -146,11 +146,12 @@ CELERY_RESULT_BACKEND = 'redis://redis:6379'
 CELERY_ACCEPT_CONTENT = ['application/json']
 CELERY_TASK_SERIALIZER = 'json'
 CELERY_RESULT_SERIALIZER = 'json'
-'''
+
+# Chama Tasks.py e executa tasks.getQuantidadeVendas a cada minuto.
+# Para Chamar a cada 30 minutos alterar crontab(minute='*/30')
 CELERY_BEAT_SCHEDULE = {
     'getQuantidadeVendas': {
        'task': 'tasks.getQuantidadeVendas',
-        'schedule': crontab()  # execute every minute
+        'schedule': crontab()  # executa a cada minuto
     }
 }
-'''
