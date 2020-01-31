@@ -1,5 +1,5 @@
 from __future__ import absolute_import, unicode_literals
-import random, requests, time, json
+import requests, json
 from math import ceil
 from django.db import connection
 from precocerto.celery import app
