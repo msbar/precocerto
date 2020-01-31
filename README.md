@@ -69,8 +69,11 @@ https://bitbucket.org/precocertoco/precocerto_challenges/src/master/3/
 
 ## O aquivo /precocerto/api/tests.py:
 - O test consiste em rodar a integração e comparar o registro de id 1 no bd local com o site vendas. 
-
 - O teste passa se os registro forem iguais.
+- Para rodar os testes execute os comandos no terminal:
+
+        $ docker exec -it web bash
+        $ python manage.py test 
 
 ## Contato e Dúvidas:
 - Marciel da Silva Barcellos
